@@ -35,13 +35,7 @@ class NN_MultiLayer:
         pass
 
     def genW_s(self):
-        # tipo 0 -> iris
-        if not (self.actual_hyper["tipo"]):
-            self.W_s = wiris.generateWs(self.actual_hyper["cant_W's"])
-            self.tipoD = wiris.tipo
-        else:
-            self.W_s = wifar.generateWs(self.actual_hyper["cant_W's"],4)
-            self.tipoD = wifar.tipo
+        # np.random.randn(ndim, ndim)
 
     def train(self, X, Y):
         """Función que realiza el proceso de entrenamiento, recibe el vector de datos de entrenamiento y el vector con
