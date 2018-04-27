@@ -51,13 +51,17 @@ class NN_MLP(object):
             del lista_X[ind]
             del lista_Y[ind]
             
-        return r_X, r_Y, np.array(lista_X), np.array(lista_Y)
+        return np.array(r_X), np.array(r_Y), np.array(lista_X), np.array(lista_Y)
 
-    def softmax(self):
-        pass
+    def softmax(self, X):
+        e_x = np.exp(X - np.max(X))
+        e_x += np.finfo(float).eps
+        suma = np.sum(e_x, 1)
+        return  e_x / suma[:,None]
 
-    def crossEntropy(self, X, Y):
-        return X
+    def crossEntropy(self, p):
+        loss = -np.log(p)
+        return np.sum(loss) / self.actual_hyper["len_batch"]
 
     def ReLU(self, X):
         return np.maximum(X,0)
@@ -67,6 +71,20 @@ class NN_MLP(object):
             ind = np.random.randint(0,len(X))
             X[ind].fill(0)
         return X
+
+    def ReLU_Prime(self, X):
+        pass
+
+    def softmax_Prime(self, X):
+        pass
+
+    def crossEntropy_Prime(self, p):
+        pass
+
+    def one_hot_encode(self, Y):
+        y = np.zeros(self.actual_hyper["len_batch"])
+        y[np.arange(Y.size), Y] = 1
+        return y
                 
 
     def genW_s(self):
@@ -94,34 +112,48 @@ class NN_MLP(object):
 
     def forward(self, X, Y):
         
-        h1 = np.dot(self.W_s[0], np.transpose(X))
-        self.Z_s.append(self.dropout(self.ReLU(h1)))
-        
-        
-##        print("Shape del batch: ",np.transpose(X).shape)
-##        print("Shape de los W's de H1: ",self.W_s[0].shape)
-##        print("Shape del resultado: ",h1.shape)
-##        print("\n------------\n")
+        h1 = self.ReLU(np.dot(self.W_s[0], np.transpose(X)))
+        self.Z_s.append(h1)
+        h1 = self.dropout(h1)
 
         if(self.actual_hyper["cantCapas"] == 2):
-            print(self.Z_s[-1].dtype)
-            h2 = np.dot(self.W_s[1], self.Z_s[-1])
-            self.Z_s.append(self.dropout(self.ReLU(h2)))
+            h2 = self.ReLU(np.dot(self.W_s[1], h1))
+            self.Z_s.append(h2)
+            h2 = self.dropout(h2)
         
-            L = np.transpose(np.dot(self.W_s[2], self.Z_s[-1]))
+            L = np.transpose(np.dot(self.W_s[2], h2))
         else:
-            L = np.transpose(np.dot(self.W_s[1], self.Z_s[-1]))
+            L = np.transpose(np.dot(self.W_s[1], h1))
 
 ##        print("Shape del batch: ",h1.shape)
 ##        print("Shape de los W's de H1: ",self.W_s[1].shape)
 ##        print("Shape del resultado: ",L.shape)
 ##        print("\n------------\n")
 
-        self.Z_s.append(self.crossEntropy(L, Y))
+        o = self.softmax(L)
 
-        print(self.Z_s[-1])
+##        print(o)
+##
+##        print(np.sum(o,1))
+##
+##        print(self.crossEntropy(o))
+        return o
+
+    def backward(self,X,Y,o):
+
+        loss = self.crossEntropy(o)
+
+        o_error = loss - o
+        print(o_error)
+
+        o_delta = o_error * self.crossEntropy_Prime(o)
+
+        print(o_delta.shape)
+        print(o_delta)
+
         
 
+        
     def train(self, X, Y):
         """Función que realiza el proceso de entrenamiento, recibe el vector de datos de entrenamiento y el vector con
            la clase a la que corresponde cada uno de los datos. Aquí se entrena el Algoritmo Genético."""
@@ -136,7 +168,9 @@ class NN_MLP(object):
         if(self.W_s == []):
             self.genW_s()
 
-        self.forward(batch_X, batch_Y)
+        o = self.forward(batch_X, batch_Y)
+
+        self.backward(batch_X, batch_Y, o)
         #while(len(X) != 0):
          #   if(iteracion)
 
@@ -182,15 +216,14 @@ def plotGrayImage(img, m = 28, n = 28):
 
 def main():
     
-    
     mnist = fetch_mldata('MNIST original')    
     train_img, test_img, train_lbl, test_lbl = train_test_split(mnist.data, mnist.target, test_size=1/7.0, random_state=0)
     train_lbl = train_lbl.astype(int)
     test_lbl = test_lbl.astype(int)
 
     nn = NN_MLP()
-    nn.addHyperparameter(2, 64, 32, 16, 0.01, 0.5)
-    nn.addHyperparameter(1, 64, 32, 16, 0.01, 0.5)
+    nn.addHyperparameter(2, 32, 16, 8, 0.01, 0.5)
+    nn.addHyperparameter(1, 32, 16, 8, 0.01, 0.5)
     nn.actual_hyper = nn.hyperparameters[0]
     
     nn.train(train_img,train_lbl)
