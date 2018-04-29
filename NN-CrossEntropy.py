@@ -73,17 +73,24 @@ class NN_MLP(object):
         return X
 
     def ReLU_Prime(self, X):
-        pass
+        return np.heaviside(X,0)
 
-    def softmax_Prime(self, X):
-        pass
+    def softmax_Prime(self, X, Y):
+        for i in range(X.shape[0]):
+            yi = np.argmax(Y[i])
+            y = X[i][yi]
+            X[i] *= -y
+            X[i][yi] = y*(1 - y)
 
-    def crossEntropy_Prime(self, p):
-        pass
+        return X
+        
 
-    def one_hot_encode(self, Y):
-        y = np.zeros(self.actual_hyper["len_batch"])
-        y[np.arange(Y.size), Y] = 1
+    def crossEntropy_Prime(self, p, Y):
+        return self.softmax_Prime(p, self.one_hot_encode(Y)) / p
+
+    def one_hot_encode(self, shape, Y):
+        y = np.zeros(shape)
+        y[np.arange(Y.shape[0]), Y] = 1
         return y
                 
 
@@ -146,7 +153,11 @@ class NN_MLP(object):
         o_error = loss - o
         print(o_error)
 
-        o_delta = o_error * self.crossEntropy_Prime(o)
+        d = self.crossEntropy_Prime(o, Y)
+
+        print(d)
+
+        o_delta = o_error * d
 
         print(o_delta.shape)
         print(o_delta)
@@ -226,10 +237,16 @@ def main():
     nn.addHyperparameter(1, 32, 16, 8, 0.01, 0.5)
     nn.actual_hyper = nn.hyperparameters[0]
     
-    nn.train(train_img,train_lbl)
-   
+    #nn.train(train_img,train_lbl)
 
+    a = np.array([[0.2,0.1,0.7],[0.7,0.9,0.6],[0.1,0.05,0.8]])
+    Y = np.array([1,2,3])
 
+    y = np.zeros(a.shape)
+    y[np.arange(Y.size)[:,None], Y] = 1
+
+    print(y)
+    
 main()
 
 
