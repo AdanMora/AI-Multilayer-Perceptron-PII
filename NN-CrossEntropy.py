@@ -61,16 +61,14 @@ class NN_MLP(object):
 
     def crossEntropy(self, p):
         loss = -np.log(p)
+        print("Loss: ",loss)
         return np.sum(loss) / self.actual_hyper["len_batch"]
 
     def ReLU(self, X):
         return np.maximum(X,0)
 
     def dropout(self, X):
-        for i in range(int(X.shape[0] * self.actual_hyper["dropout"])):
-            ind = np.random.randint(0,len(X))
-            X[ind].fill(0)
-        return X
+        return X * ((np.random.rand(*X.shape) < self.actual_hyper["dropout"]) / self.actual_hyper["dropout"])
 
     def ReLU_Prime(self, X):
         return np.heaviside(X,0)
@@ -82,38 +80,45 @@ class NN_MLP(object):
             X[i] *= -y
             X[i][yi] = y*(1 - y)
 
+        print(X)
+
         return X
         
 
     def crossEntropy_Prime(self, p, Y):
-        return self.softmax_Prime(p, self.one_hot_encode(Y)) / p
+        return self.softmax_Prime(p, self.one_hot_encode(p.shape,Y)) / p
 
     def one_hot_encode(self, shape, Y):
         y = np.zeros(shape)
         y[np.arange(Y.shape[0]), Y] = 1
+        print(y)
         return y
                 
 
     def genW_s(self):
+        # np.random.randn(n) * sqrt(2.0/n)
+        
         cant = self.actual_hyper["cantCapas"] + 1
         self.W_s = [[]] * cant
 
+        n = self.actual_hyper["len_batch"]
+
         # W1: input to H1
         H1 = []
-        self.W_s[0] = np.random.randn(self.actual_hyper["cantH1"], 784)
+        self.W_s[0] = np.random.randn(self.actual_hyper["cantH1"], 784) * math.sqrt(2.0/n)
 
         # W2: H1 to H2
 
         if(self.actual_hyper["cantCapas"] == 2):
             H2 = []
-            self.W_s[1] = np.random.randn(self.actual_hyper["cantH2"], self.actual_hyper["cantH1"])
+            self.W_s[1] = np.random.randn(self.actual_hyper["cantH2"], self.actual_hyper["cantH1"]) * math.sqrt(2.0/n)
 
         # W3: H2 o H1 to Loss
 
         if(self.actual_hyper["cantCapas"] == 2):
-            self.W_s[2] = np.random.randn(10, self.actual_hyper["cantH2"]) 
+            self.W_s[2] = np.random.randn(10, self.actual_hyper["cantH2"]) * math.sqrt(2.0/n)
         else:
-            self.W_s[1] = np.random.randn(10, self.actual_hyper["cantH1"]) #
+            self.W_s[1] = np.random.randn(10, self.actual_hyper["cantH1"]) * math.sqrt(2.0/n)
 
         self.W_s = np.array(self.W_s)
 
@@ -159,7 +164,6 @@ class NN_MLP(object):
 
         o_delta = o_error * d
 
-        print(o_delta.shape)
         print(o_delta)
 
         
@@ -237,15 +241,26 @@ def main():
     nn.addHyperparameter(1, 32, 16, 8, 0.01, 0.5)
     nn.actual_hyper = nn.hyperparameters[0]
     
-    #nn.train(train_img,train_lbl)
+    nn.train(train_img,train_lbl)
 
-    a = np.array([[0.2,0.1,0.7],[0.7,0.9,0.6],[0.1,0.05,0.8]])
-    Y = np.array([1,2,3])
+##    a = np.array([[0.2,0.1,0.7],[0.7,0.9,0.6],[0.1,0.05,0.8]])
+##    Y = np.array([1,2,0])
 
-    y = np.zeros(a.shape)
-    y[np.arange(Y.size)[:,None], Y] = 1
-
-    print(y)
+##    U1 = np.random.rand(*a.shape) < 0.5
+##    U2 = (np.random.rand(*a.shape) < 0.5) / 0.5
+##
+##    print(*a.shape)
+##
+##    print(a)
+##
+##    print(U1)
+##    print(U2)
+##    
+##    b = a * U1
+##    c = a * U2
+##
+##    print(b)
+##    print(c)
     
 main()
 
